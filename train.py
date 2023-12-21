@@ -71,11 +71,13 @@ def patch_trg(trg, pad_idx):
 
 def train_epoch(model, training_data, optimizer, opt, device, smoothing):
     ''' Epoch operation in training phase'''
-
+    start = time.time()
+    
     model.train()
     total_loss, n_word_total, n_word_correct = 0, 0, 0 
 
     desc = '  - (Training)   '
+    iter = 0
     for batch in tqdm(training_data, mininterval=2, desc=desc, leave=False):
 
         # prepare data
@@ -96,6 +98,19 @@ def train_epoch(model, training_data, optimizer, opt, device, smoothing):
         n_word_total += n_word
         n_word_correct += n_correct
         total_loss += loss.item()
+        
+        # print log
+        iter += 1
+        if iter % opt.print_every_iter == 0:
+            train_iter_loss = total_loss/n_word_total
+            train_ppl = math.exp(min(train_iter_loss, 100))
+            # Current learning rate
+            lr = optimizer._optimizer.param_groups[0]['lr']
+            print('  - {header:12} ppl: {ppl: 8.5f}, average_word_loss: {loss:3.3f}, lr: {lr:8.10f}, '\
+                'elapse: {elapse:3.3f} min'.format(
+                    header=f"(Training iter {iter})", ppl=train_ppl,
+                    loss=train_iter_loss, elapse=(time.time()-start)/60, lr=lr))
+            start = time.time()
 
     loss_per_word = total_loss/n_word_total
     accuracy = n_word_correct/n_word_total
@@ -215,7 +230,8 @@ def main():
 
     parser.add_argument('-epoch', type=int, default=10)
     parser.add_argument('-b', '--batch_size', type=int, default=2048)
-
+    parser.add_argument('-print_every_iter', type=int, default=100000)
+    
     parser.add_argument('-d_model', type=int, default=512)
     parser.add_argument('-d_inner_hid', type=int, default=2048)
     parser.add_argument('-d_k', type=int, default=64)
