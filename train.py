@@ -14,8 +14,8 @@ import os
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from torchtext.data import Field, Dataset, BucketIterator
-from torchtext.datasets import TranslationDataset
+from torchtext.legacy.data import Field, Dataset, BucketIterator
+from torchtext.legacy.datasets import TranslationDataset
 
 import transformer.Constants as Constants
 from transformer.Models import Transformer
@@ -151,7 +151,7 @@ def train(model, training_data, validation_data, optimizer, device, opt):
         log_vf.write('epoch,loss,ppl,accuracy\n')
 
     def print_performances(header, ppl, accu, start_time, lr):
-        print('  - {header:12} ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, lr: {lr:8.5f}, '\
+        print('  - {header:12} ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, lr: {lr:8.10f}, '\
               'elapse: {elapse:3.3f} min'.format(
                   header=f"({header})", ppl=ppl,
                   accu=100*accu, elapse=(time.time()-start_time)/60, lr=lr))
@@ -203,7 +203,7 @@ def train(model, training_data, validation_data, optimizer, device, opt):
 def main():
     ''' 
     Usage:
-    python train.py -data_pkl m30k_deen_shr.pkl -log m30k_deen_shr -embs_share_weight -proj_share_weight -label_smoothing -output_dir output -b 256 -warmup 128000
+    python train.py -train_path '/home/hinetabi/Documents/university/data/sample/processed/v1-train' -val_path '/home/hinetabi/Documents/university/data/sample/processed/v1-val' -data_pkl /home/hinetabi/Documents/university/data/sample/processed/multi30k_de_en.pkl -embs_share_weight -proj_share_weight -label_smoothing -output_dir output -b 4 -epoch 20
     '''
 
     parser = argparse.ArgumentParser()
@@ -271,8 +271,8 @@ def main():
 
     if all((opt.train_path, opt.val_path)):
         training_data, validation_data = prepare_dataloaders_from_bpe_files(opt, device)
-    elif opt.data_pkl:
-        training_data, validation_data = prepare_dataloaders(opt, device)
+    # elif opt.data_pkl:
+    #     training_data, validation_data = prepare_dataloaders(opt, device)
     else:
         raise
 

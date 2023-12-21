@@ -12,7 +12,7 @@ import torch
 import tarfile
 import torchtext.data
 import torchtext.datasets
-from torchtext.datasets import TranslationDataset
+from torchtext.legacy.datasets import TranslationDataset
 import transformer.Constants as Constants
 from learn_bpe import learn_bpe
 from apply_bpe import BPE
@@ -24,8 +24,8 @@ __author__ = "Yu-Hsiang Huang"
 _TRAIN_DATA_SOURCES = [
     {"url": "http://data.statmt.org/wmt17/translation-task/" \
              "training-parallel-nc-v12.tgz",
-     "trg": "news-commentary-v12.de-en.en",
-     "src": "news-commentary-v12.de-en.de"},
+     "trg": "train.trg",
+     "src": "train.src"},
     #{"url": "http://www.statmt.org/wmt13/training-parallel-commoncrawl.tgz",
     # "trg": "commoncrawl.de-en.en",
     # "src": "commoncrawl.de-en.de"},
@@ -36,14 +36,14 @@ _TRAIN_DATA_SOURCES = [
 
 _VAL_DATA_SOURCES = [
     {"url": "http://data.statmt.org/wmt17/translation-task/dev.tgz",
-     "trg": "newstest2013.en",
-     "src": "newstest2013.de"}]
+     "trg": "val.trg",
+     "src": "val.src"}]
 
 _TEST_DATA_SOURCES = [
     {"url": "https://storage.googleapis.com/tf-perf-public/" \
                 "official_transformer/test_data/newstest2014.tgz",
-     "trg": "newstest2014.en",
-     "src": "newstest2014.de"}]
+     "trg": "val.trg",
+     "src": "val.src"}]
 
 
 class TqdmUpTo(tqdm):
@@ -158,12 +158,16 @@ def encode_files(bpe, src_in_file, trg_in_file, data_dir, prefix):
 
 
 def main():
+    '''
+    Usage: python preprocess.py -save_data multi30k_de_en.pkl -raw_dir /home/hinetabi/Documents/university/data/sample/raw/ -data_dir /home/hinetabi/Documents/university/data/sample/processed/
+    '''
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('-raw_dir', required=True)
     parser.add_argument('-data_dir', required=True)
-    parser.add_argument('-codes', required=True)
+    parser.add_argument('-codes', default="code", required=False)
     parser.add_argument('-save_data', required=True)
-    parser.add_argument('-prefix', required=True)
+    parser.add_argument('-prefix', default="v1", required=False)
     parser.add_argument('-max_len', type=int, default=100)
     parser.add_argument('--symbols', '-s', type=int, default=32000, help="Vocabulary size")
     parser.add_argument(
@@ -209,7 +213,7 @@ def main():
     sys.stderr.write(f"Done.\n")
 
 
-    field = torchtext.data.Field(
+    field = torchtext.legacy.data.Field(
         tokenize=str.split,
         lower=True,
         pad_token=Constants.PAD_WORD,
@@ -232,8 +236,8 @@ def main():
 
     from itertools import chain
     field.build_vocab(chain(train.src, train.trg), min_freq=2)
-
-    data = { 'settings': opt, 'vocab': field, }
+    
+    data = { 'settings': opt, 'vocab': {'src': field, 'trg': field}, }
     opt.save_data = os.path.join(opt.data_dir, opt.save_data)
 
     print('[Info] Dumping the processed data to pickle file', opt.save_data)
@@ -276,11 +280,11 @@ def main_wo_bpe():
     def tokenize_trg(text):
         return [tok.text for tok in trg_lang_model.tokenizer(text)]
 
-    SRC = torchtext.data.Field(
+    SRC = torchtext.legacy.data.Field(
         tokenize=tokenize_src, lower=not opt.keep_case,
         pad_token=Constants.PAD_WORD, init_token=Constants.BOS_WORD, eos_token=Constants.EOS_WORD)
 
-    TRG = torchtext.data.Field(
+    TRG = torchtext.legacy.data.Field(
         tokenize=tokenize_trg, lower=not opt.keep_case,
         pad_token=Constants.PAD_WORD, init_token=Constants.BOS_WORD, eos_token=Constants.EOS_WORD)
 
@@ -296,7 +300,7 @@ def main_wo_bpe():
     def filter_examples_with_length(x):
         return len(vars(x)['src']) <= MAX_LEN and len(vars(x)['trg']) <= MAX_LEN
 
-    train, val, test = torchtext.datasets.Multi30k.splits(
+    train, val, test = torchtext.legacy.datasets.Multi30k.splits(
             exts = ('.' + opt.lang_src, '.' + opt.lang_trg),
             fields = (SRC, TRG),
             filter_pred=filter_examples_with_length)
@@ -305,7 +309,7 @@ def main_wo_bpe():
     print('[Info] Get source language vocabulary size:', len(SRC.vocab))
     TRG.build_vocab(train.trg, min_freq=MIN_FREQ)
     print('[Info] Get target language vocabulary size:', len(TRG.vocab))
-
+    
     if opt.share_vocab:
         print('[Info] Merging two vocabulary ...')
         for w, _ in SRC.vocab.stoi.items():
@@ -333,4 +337,4 @@ def main_wo_bpe():
 
 if __name__ == '__main__':
     main_wo_bpe()
-    #main()
+    # main()

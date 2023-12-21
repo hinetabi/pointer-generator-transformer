@@ -72,7 +72,7 @@ class Translator(nn.Module):
         scores, best_k_idx_in_k2 = scores.view(-1).topk(beam_size)
  
         # Get the corresponding positions of the best k candidiates.
-        best_k_r_idxs, best_k_c_idxs = best_k_idx_in_k2 // beam_size, best_k_idx_in_k2 % beam_size
+        best_k_r_idxs, best_k_c_idxs = torch.div(best_k_idx_in_k2, beam_size, rounding_mode='trunc'), best_k_idx_in_k2 % beam_size
         best_k_idx = best_k2_idx[best_k_r_idxs, best_k_c_idxs]
 
         # Copy the corresponding previous tokens.
@@ -111,4 +111,5 @@ class Translator(nn.Module):
                     _, ans_idx = scores.div(seq_lens.float() ** alpha).max(0)
                     ans_idx = ans_idx.item()
                     break
+                
         return gen_seq[ans_idx][:seq_lens[ans_idx]].tolist()
